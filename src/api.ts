@@ -5,6 +5,7 @@ import { queryTransfers, queryAllTransfers, queryByTxHash, querySummary, queryNf
 import { getLatestLedger } from "./rpc";
 import { getIndexerStats } from "./indexer";
 import { createAccountsRouter } from "./api/accounts";
+import { createWebhooksRouter } from "./api/webhooks";
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const limiter = rateLimit({
@@ -69,6 +70,9 @@ export function createApp(): express.Application {
 
   // ── Accounts routes ───────────────────────────────────────────────────────────
   app.use("/accounts", createAccountsRouter());
+
+  // ── Webhook subscription management ──────────────────────────────────────────
+  app.use("/webhooks", createWebhooksRouter());
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const parseIntParam = (val: unknown, fallback: number): number => {
