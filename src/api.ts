@@ -38,6 +38,11 @@ const withDisplay = <T extends { amount: string }>(t: T) => ({
   displayAmount: toDisplayAmount(t.amount),
 });
 
+function parseSelectQuery(value: unknown): string[] | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
 const VALID_EVENT_TYPES = new Set(["transfer", "mint", "burn", "clawback"]);
 
 // ── CSV utilities ─────────────────────────────────────────────────────────────
@@ -220,7 +225,7 @@ export function createApp(): express.Application {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { address } = req.params;
-        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset } = req.query;
+        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset, cursor, $filter, $select } = req.query;
 
         const fromDateVal = parseDateParam(fromDate, res);
         if (fromDateVal === null) return;
@@ -236,6 +241,9 @@ export function createApp(): express.Application {
           address,
           direction: "incoming",
           contractId: contractId as string | undefined,
+          filter: $filter as string | undefined,
+          select: parseSelectQuery($select),
+          cursor: cursor as string | undefined,
           fromLedger: fromLedger ? parseIntParam(fromLedger, 0) : undefined,
           toLedger: toLedger ? parseIntParam(toLedger, 0) : undefined,
           fromDate: fromDateVal,
@@ -245,7 +253,17 @@ export function createApp(): express.Application {
           offset: off,
         });
 
-        res.json({ ...result, transfers: result.transfers.map(withDisplay), limit: lim, offset: off });
+        res.json({
+          ...result,
+          transfers: result.transfers.map((transfer) => {
+            if (transfer && typeof (transfer as { amount?: unknown }).amount === "string") {
+              return withDisplay(transfer as { amount: string });
+            }
+            return transfer;
+          }),
+          limit: lim,
+          offset: off,
+        });
       } catch (err) {
         next(err);
       }
@@ -262,7 +280,7 @@ export function createApp(): express.Application {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { address } = req.params;
-        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset } = req.query;
+        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset, cursor, $filter, $select } = req.query;
 
         const fromDateVal = parseDateParam(fromDate, res);
         if (fromDateVal === null) return;
@@ -278,6 +296,9 @@ export function createApp(): express.Application {
           address,
           direction: "outgoing",
           contractId: contractId as string | undefined,
+          filter: $filter as string | undefined,
+          select: parseSelectQuery($select),
+          cursor: cursor as string | undefined,
           fromLedger: fromLedger ? parseIntParam(fromLedger, 0) : undefined,
           toLedger: toLedger ? parseIntParam(toLedger, 0) : undefined,
           fromDate: fromDateVal,
@@ -287,7 +308,17 @@ export function createApp(): express.Application {
           offset: off,
         });
 
-        res.json({ ...result, transfers: result.transfers.map(withDisplay), limit: lim, offset: off });
+        res.json({
+          ...result,
+          transfers: result.transfers.map((transfer) => {
+            if (transfer && typeof (transfer as { amount?: unknown }).amount === "string") {
+              return withDisplay(transfer as { amount: string });
+            }
+            return transfer;
+          }),
+          limit: lim,
+          offset: off,
+        });
       } catch (err) {
         next(err);
       }
@@ -315,7 +346,7 @@ export function createApp(): express.Application {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { address } = req.params;
-        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset } = req.query;
+        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset, cursor, $filter, $select } = req.query;
 
         const fromDateVal = parseDateParam(fromDate, res);
         if (fromDateVal === null) return;
@@ -330,6 +361,9 @@ export function createApp(): express.Application {
         const result = await queryAllTransfers({
           address,
           contractId: contractId as string | undefined,
+          filter: $filter as string | undefined,
+          select: parseSelectQuery($select),
+          cursor: cursor as string | undefined,
           fromLedger: fromLedger ? parseIntParam(fromLedger, 0) : undefined,
           toLedger: toLedger ? parseIntParam(toLedger, 0) : undefined,
           fromDate: fromDateVal,
@@ -339,7 +373,17 @@ export function createApp(): express.Application {
           offset: off,
         });
 
-        res.json({ ...result, transfers: result.transfers.map(withDisplay), limit: lim, offset: off });
+        res.json({
+          ...result,
+          transfers: result.transfers.map((transfer) => {
+            if (transfer && typeof (transfer as { amount?: unknown }).amount === "string") {
+              return withDisplay(transfer as { amount: string });
+            }
+            return transfer;
+          }),
+          limit: lim,
+          offset: off,
+        });
       } catch (err) {
         next(err);
       }
@@ -525,7 +569,7 @@ export function createApp(): express.Application {
     "/nfts/transfers",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { contract, token_id, address, fromLedger, toLedger, limit, offset } = req.query;
+        const { contract, token_id, address, fromLedger, toLedger, limit, offset, cursor, $filter, $select } = req.query;
         const lim = parseIntParam(limit, 50);
         const off = parseIntParam(offset, 0);
 
@@ -533,6 +577,9 @@ export function createApp(): express.Application {
           contractId: contract as string | undefined,
           tokenId: token_id as string | undefined,
           address: address as string | undefined,
+          filter: $filter as string | undefined,
+          select: parseSelectQuery($select),
+          cursor: cursor as string | undefined,
           fromLedger: fromLedger ? parseIntParam(fromLedger, 0) : undefined,
           toLedger: toLedger ? parseIntParam(toLedger, 0) : undefined,
           limit: lim,
