@@ -651,6 +651,7 @@ export async function queryAccountSummaries(params: AccountSummaryQueryParams) {
 export type AllTransfersQueryParams = {
   address: string;
   contractId?: string;
+  token?: string;
   filter?: string;
   select?: string[];
   cursor?: string;
@@ -667,6 +668,7 @@ export async function queryAllTransfers(params: AllTransfersQueryParams) {
   const {
     address,
     contractId,
+    token,
     filter,
     select,
     cursor,
@@ -682,6 +684,7 @@ export async function queryAllTransfers(params: AllTransfersQueryParams) {
   const baseWhere: Prisma.TokenTransferWhereInput = {
     OR: [{ toAddress: address }, { fromAddress: address }],
     ...(contractId ? { contractId } : {}),
+    ...(token ? { contractId: token } : {}),
     ...(eventTypes?.length ? { eventType: { in: eventTypes } } : {}),
     ...(fromLedger || toLedger
       ? {

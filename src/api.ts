@@ -1,7 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { queryTransfers, queryAllTransfers, queryByTxHash, querySummary, getLastIndexedLedger, prisma } from "./db";
 import { queryHostFnLogs } from "./indexer/host-fn-log";
 import { queryTransfers, queryAllTransfers, queryByTxHash, querySummary, queryNftTransfers, getNftOwner, getNftMetadata, getLastIndexedLedger, prisma } from "./db";
 import { getLatestLedger } from "./rpc";
@@ -348,7 +347,20 @@ export function createApp(): express.Application {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { address } = req.params;
-        const { contractId, fromLedger, toLedger, fromDate, toDate, eventType, limit, offset, cursor, $filter, $select } = req.query;
+        const {
+          contractId,
+          fromLedger,
+          toLedger,
+          fromDate,
+          toDate,
+          eventType,
+          limit,
+          offset,
+          token,
+          cursor,
+          $filter,
+          $select,
+        } = req.query;
 
         const fromDateVal = parseDateParam(fromDate, res);
         if (fromDateVal === null) return;
@@ -357,12 +369,25 @@ export function createApp(): express.Application {
         const eventTypes = parseEventTypes(eventType, res);
         if (eventTypes === null) return;
 
+        // Validate optional ?token= query param.
+        // Must be a 56-character Stellar SAC contract address starting with "C".
+        if (token !== undefined) {
+          const tokenStr = String(token).trim();
+          if (!tokenStr.startsWith("C") || tokenStr.length !== 56) {
+            res.status(400).json({
+              error: `Invalid token address: "${tokenStr}". Must be a 56-character Stellar contract address starting with "C".`,
+            });
+            return;
+          }
+        }
+
         const lim = parseIntParam(limit, 50);
         const off = parseIntParam(offset, 0);
 
         const result = await queryAllTransfers({
           address,
           contractId: contractId as string | undefined,
+          token: token !== undefined ? String(token).trim() : undefined,
           filter: $filter as string | undefined,
           select: parseSelectQuery($select),
           cursor: cursor as string | undefined,
@@ -589,6 +614,13 @@ export function createApp(): express.Application {
           limit: Math.min(limit, 200),
           offset,
           logs,
+        });
+      } catch (err) {
+        next(err);
+      }
+    }
+  );
+
   // ── GET /nfts/transfers ──────────────────────────────────────────────────────
   /**
    * Query CAP-46 NFT transfer events.
@@ -674,7 +706,6 @@ export function createApp(): express.Application {
       } catch (err) {
         next(err);
       }
-    },
     }
   );
 
