@@ -531,9 +531,7 @@ export function createApp(): express.Application {
    *     totalReceived, totalSent, netFlow,
    *     displayTotalReceived, displayTotalSent, displayNetFlow, txCount }] }
    */
-  app.get(
-    "/summary/:address",
-    async (req: Request, res: Response, next: NextFunction) => {
+  const summaryHandler = async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { address } = req.params;
         const { contractId, fromDate, toDate } = req.query;
@@ -577,8 +575,10 @@ export function createApp(): express.Application {
       } catch (err) {
         next(err);
       }
-    }
-  );
+    };
+
+  app.get("/summary/:address", summaryHandler);
+  app.get("/accounts/:address/summary", summaryHandler);
 
   // ── GET /host-fn/:contractId ─────────────────────────────────────────────────
   /**
